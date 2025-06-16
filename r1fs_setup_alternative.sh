@@ -114,11 +114,11 @@ else
     else
         error "Neither curl nor wget is available to download Kubo."
         exit 1
-    end
+    fi
     if [[ ! -f kubo.tar.gz ]]; then
         error "Failed to download Kubo archive from $DOWNLOAD_URL"
         exit 1
-    end
+    fi
     info "Download complete. Verifying checksum..."
     if command -v sha512sum &> /dev/null; then
         EXPECTED_HASH="$(curl -fsSL ${DOWNLOAD_URL}.sha512 | awk '{print $1}')"
@@ -126,8 +126,8 @@ else
         if [[ -n "$EXPECTED_HASH" && "$DOWNLOADED_HASH" != "$EXPECTED_HASH" ]]; then
             error "Checksum verification failed! The downloaded archive may be corrupted."
             exit 1
-        end
-    end
+        fi
+    fi
     info "Extracting Kubo archive..."
     tar -xzf kubo.tar.gz
     cd kubo
