@@ -65,6 +65,7 @@ run_and_log() {
     local cmd="$1"
     local description="$2"
     local show_output="${3:-true}"
+    local timeout_duration="${4:-30}"
     
     if [[ "$VERBOSE" == "true" ]]; then
         log_with_color "Running: $cmd" "cyan"
@@ -72,9 +73,14 @@ run_and_log() {
     
     if [[ "$show_output" == "true" ]]; then
         log_with_color "$description:" "blue"
-        eval "$cmd" 2>&1 | sed 's/^/  /'
+        # Add timeout to prevent hanging
+        if timeout "$timeout_duration" bash -c "$cmd" 2>&1; then
+            : # Command succeeded
+        else
+            log_with_color "  Command timed out after ${timeout_duration}s or failed" "red"
+        fi | sed 's/^/  /'
     else
-        eval "$cmd" >/dev/null 2>&1
+        timeout "$timeout_duration" bash -c "$cmd" >/dev/null 2>&1 || true
     fi
 }
 
@@ -155,15 +161,22 @@ fi
 
 log_with_color "=== NETWORK CONNECTIVITY ===" "blue"
 # Test basic network connectivity
-run_and_log "ping -c 3 8.8.8.8" "Internet connectivity test"
+run_and_log "timeout 10 ping -c 3 8.8.8.8" "Internet connectivity test"
 run_and_log "netstat -tlnp | grep :4001" "IPFS port 4001 listening status"
 run_and_log "netstat -tlnp | grep :5001" "IPFS API port 5001 listening status"
 
 # Test if we can reach the relay IP mentioned in the error
 relay_ip="163.172.143.5"
 log_with_color "Testing connectivity to problematic relay: $relay_ip" "blue"
-run_and_log "ping -c 3 $relay_ip" "Ping test to $relay_ip"
-run_and_log "telnet $relay_ip 4001 < /dev/null" "Port 4001 connectivity to $relay_ip" false
+run_and_log "timeout 10 ping -c 3 $relay_ip" "Ping test to $relay_ip"
+
+# Test port connectivity with timeout (safer than telnet)
+log_with_color "Testing port 4001 connectivity to $relay_ip:" "blue"
+if timeout 5 bash -c "</dev/tcp/$relay_ip/4001" 2>/dev/null; then
+    log_with_color "  Port 4001 to $relay_ip: ACCESSIBLE" "green"
+else
+    log_with_color "  Port 4001 to $relay_ip: NOT ACCESSIBLE" "red"
+fi
 
 log_with_color "=== IPFS NODE IDENTITY ===" "blue"
 if $daemon_running && command -v ipfs &> /dev/null; then
