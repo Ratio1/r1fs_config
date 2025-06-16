@@ -148,6 +148,15 @@ else
         info "Creating symlink to make ipfs command available in PATH..."
         ln -sf /usr/local/bin/ipfs /usr/bin/ipfs
     fi
+    
+    # Set IPFS_PATH for root user to use the shared repository
+    info "Configuring IPFS_PATH environment variable for root user..."
+    if ! grep -q "export IPFS_PATH=/var/lib/ipfs" /root/.bashrc 2>/dev/null; then
+        echo "export IPFS_PATH=/var/lib/ipfs" >> /root/.bashrc
+    fi
+    if ! grep -q "export IPFS_PATH=/var/lib/ipfs" /root/.profile 2>/dev/null; then
+        echo "export IPFS_PATH=/var/lib/ipfs" >> /root/.profile
+    fi
 fi
 
 # Ensure ipfs user and group exist
@@ -250,6 +259,8 @@ if systemctl is-active --quiet ipfs; then
     
     # Display bootstrap information for other relay nodes
     info "Generating bootstrap information for other relay nodes..."
+    # Set IPFS_PATH temporarily for this session if not already set
+    export IPFS_PATH=/var/lib/ipfs
     PEER_ID=$(sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs id -f='<id>'")
     MY_IP=$(hostname -I | awk '{print $1}')
     MY_BOOTSTRAP="/ip4/$MY_IP/tcp/4001/p2p/$PEER_ID"
