@@ -171,8 +171,14 @@ if [[ -n "$SWARM_KEY_FILE" ]]; then
     # Check if it's a base64 encoded file
     if [[ "$SWARM_KEY_FILE" == *"base64"* ]] || [[ "$SWARM_KEY_FILE" == *"_base64.txt" ]]; then
         info "Decoding base64 swarm key file: $SWARM_KEY_FILE"
+        # Get absolute path to ensure file can be found
+        SWARM_KEY_ABS_PATH="$(realpath "$SWARM_KEY_FILE")"
+        if [[ ! -f "$SWARM_KEY_ABS_PATH" ]]; then
+            error "Base64 swarm key file not found: $SWARM_KEY_ABS_PATH"
+            exit 1
+        fi
         # Decode base64 file and write to swarm.key
-        base64 -d "$SWARM_KEY_FILE" > "/var/lib/ipfs/swarm.key"
+        base64 -d "$SWARM_KEY_ABS_PATH" > "/var/lib/ipfs/swarm.key"
         chown ipfs:ipfs "/var/lib/ipfs/swarm.key"
         chmod 600 "/var/lib/ipfs/swarm.key"
     else
