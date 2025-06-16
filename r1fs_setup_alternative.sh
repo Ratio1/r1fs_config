@@ -155,7 +155,8 @@ chmod 750 /var/lib/ipfs
 export IPFS_PATH=/var/lib/ipfs
 if [[ ! -f "/var/lib/ipfs/config" ]]; then
     info "Initializing IPFS repository (profile: server, empty repo)..."
-    sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs init -e --profile server"
+    # --profile server will add connection filters.
+    sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs init"
 fi
 
 # If a swarm key is provided, copy it into place

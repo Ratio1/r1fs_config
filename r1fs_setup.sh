@@ -79,7 +79,8 @@ cd ..
 
 # Step 2: Initialize with server profile
 log_with_color "Initializing IPFS with server profile..." "blue"
-ipfs init --profile server
+# --profile server will add connection filters.
+ipfs init
 
 # Step 3: Configure Circuit Relay v2 Service
 ipfs config --json Swarm.RelayService.Enabled true
