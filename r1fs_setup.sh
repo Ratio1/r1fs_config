@@ -66,9 +66,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ -f "kubo_${KUBO_VERSION}_linux-amd64.tar.gz" ]; then
+if [ -f "kubo_${KUBO_VERSION}_linux-${ARCH}.tar.gz" ]; then
     log_with_color "Extracting Kubo package..." "blue"
-    tar -xvzf "kubo_${KUBO_VERSION}_linux-amd64.tar.gz" 
+    tar -xvzf "kubo_${KUBO_VERSION}_linux-${ARCH}.tar.gz" 
 else
     log_with_color "Kubo package not found. Please check the download." "red"
     exit 1
@@ -89,11 +89,17 @@ ipfs config --json Swarm.RelayClient.Enabled false
 
 # Step 4: Set up swarm key for private network
 log_with_color "Setting up swarm key for private network..." "blue"
+log_with_color "Current working directory: $(pwd)" "blue"
+log_with_color "Looking for swarm key file..." "blue"
 if [ -f "swarm_key_base64.txt" ]; then
+    log_with_color "Found swarm_key_base64.txt, installing..." "green"
     cat swarm_key_base64.txt | base64 -d > ~/.ipfs/swarm.key
-    log_with_color "Swarm key installed from base64 file"
+    log_with_color "Swarm key installed from base64 file" "green"
 else
-    log_with_color "swarm_key_base64.txt not found. Please provide a valid swarm key file."
+    log_with_color "swarm_key_base64.txt not found in current directory: $(pwd)" "red"
+    log_with_color "Please ensure the swarm key file is in the same directory as this script." "yellow"
+    log_with_color "Available files in current directory:" "yellow"
+    ls -la
     exit 1
 fi
 
@@ -111,7 +117,7 @@ PEER_ID=$(ipfs id -f='<id>')
 log_with_color "Node Peer ID: $PEER_ID" "blue"
 MY_IP=$(hostname -I | awk '{print $1}') 
 log_with_color "Node IP: $MY_IP" "blue"
-MY_BOOTSTRAP="/ip4/$MY_IP/tcp/4001/p2p/$PEER_ID" "blue"
+MY_BOOTSTRAP="/ip4/$MY_IP/tcp/4001/p2p/$PEER_ID"
 log_with_color "Bootstrap address: $MY_BOOTSTRAP" "blue"
 log_with_color "Please run the following command on the other relay servers:" "blue"
 log_with_color "ipfs bootstrap add $MY_BOOTSTRAP" "green"
