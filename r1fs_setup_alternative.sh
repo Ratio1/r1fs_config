@@ -47,10 +47,12 @@ while getopts "k:" opt; do
     esac
 done
 
-# If no -k provided, check common locations for a swarm.key
+# If no -k provided, check common locations for a swarm.key or base64 encoded file
 if [[ -z "$SWARM_KEY_FILE" ]]; then
     if [[ -f "./swarm.key" ]]; then
         SWARM_KEY_FILE="./swarm.key"
+    elif [[ -f "./swarm_key_base64.txt" ]]; then
+        SWARM_KEY_FILE="./swarm_key_base64.txt"
     elif [[ -f "/etc/ipfs/swarm.key" ]]; then
         SWARM_KEY_FILE="/etc/ipfs/swarm.key"
     fi
@@ -165,11 +167,22 @@ fi
 # If a swarm key is provided, copy it into place
 if [[ -n "$SWARM_KEY_FILE" ]]; then
     info "Integrating swarm key for private network..."
-    # Only copy if not already in place or differs
-    if [[ ! -f "/var/lib/ipfs/swarm.key" || $(diff -q "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key") ]]; then
-        cp -f "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key"
+    
+    # Check if it's a base64 encoded file
+    if [[ "$SWARM_KEY_FILE" == *"base64"* ]] || [[ "$SWARM_KEY_FILE" == *"_base64.txt" ]]; then
+        info "Decoding base64 swarm key file: $SWARM_KEY_FILE"
+        # Decode base64 file and write to swarm.key
+        base64 -d "$SWARM_KEY_FILE" > "/var/lib/ipfs/swarm.key"
         chown ipfs:ipfs "/var/lib/ipfs/swarm.key"
         chmod 600 "/var/lib/ipfs/swarm.key"
+    else
+        # Handle regular swarm key file
+        # Only copy if not already in place or differs
+        if [[ ! -f "/var/lib/ipfs/swarm.key" || $(diff -q "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key") ]]; then
+            cp -f "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key"
+            chown ipfs:ipfs "/var/lib/ipfs/swarm.key"
+            chmod 600 "/var/lib/ipfs/swarm.key"
+        fi
     fi
 fi
 
