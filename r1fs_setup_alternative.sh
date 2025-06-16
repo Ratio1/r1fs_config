@@ -35,7 +35,7 @@ info "Starting IPFS Relay Install Alternative script (version $VER)..."
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root. Re-running with sudo..."
-    exec sudo bash "$0" "$@"
+    exec sudo bash -c "cd '$(pwd)' && bash '$0' $*"
 fi
 
 # Parse options
