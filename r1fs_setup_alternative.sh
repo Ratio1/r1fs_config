@@ -157,6 +157,17 @@ else
     if ! grep -q "export IPFS_PATH=/var/lib/ipfs" /root/.profile 2>/dev/null; then
         echo "export IPFS_PATH=/var/lib/ipfs" >> /root/.profile
     fi
+    
+    # Reload shell configuration for immediate availability
+    info "Reloading shell configuration..."
+    if [[ -f /root/.bashrc ]]; then
+        source /root/.bashrc 2>/dev/null || true
+    fi
+    if [[ -f /root/.profile ]]; then
+        source /root/.profile 2>/dev/null || true
+    fi
+    # Also export for current session
+    export IPFS_PATH=/var/lib/ipfs
 fi
 
 # Ensure ipfs user and group exist
