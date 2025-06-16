@@ -122,19 +122,36 @@ for binary_path in /usr/local/bin /usr/bin /bin /opt/bin; do
     done
 done
 
-# Remove symbolic links to IPFS binaries
+# Remove symbolic links to IPFS binaries (specifically created by install_alternative)
 info "Removing IPFS symbolic links..."
+# Remove the specific symlink created by install_alternative: /usr/bin/ipfs -> /usr/local/bin/ipfs
+if [[ -L "/usr/bin/ipfs" ]]; then
+    info "Removing symlink /usr/bin/ipfs -> /usr/local/bin/ipfs"
+    rm -f /usr/bin/ipfs
+fi
+# Remove any other IPFS/kubo symbolic links
 find /usr/local/bin /usr/bin /bin -type l -name "*ipfs*" -exec rm -f {} \; 2>/dev/null || true
 find /usr/local/bin /usr/bin /bin -type l -name "*kubo*" -exec rm -f {} \; 2>/dev/null || true
 
-# Remove downloaded installation files
+# Remove downloaded installation files and Kubo extraction directories
 info "Removing downloaded IPFS installation files..."
 for download_dir in /tmp /var/tmp /opt /root /home/*; do
     if [[ -d "$download_dir" ]]; then
         find "$download_dir" -name "*kubo*" -type f -exec rm -f {} \; 2>/dev/null || true
         find "$download_dir" -name "*ipfs*tar.gz" -exec rm -f {} \; 2>/dev/null || true
         find "$download_dir" -name "go-ipfs*" -exec rm -rf {} \; 2>/dev/null || true
+        # Remove Kubo extraction directories from install_alternative
+        find "$download_dir" -name "kubo" -type d -exec rm -rf {} \; 2>/dev/null || true
     fi
+done
+
+# Remove installation files from current working directory (common with install_alternative)
+info "Removing installation files from common locations..."
+for pattern in kubo_v*.tar.gz kubo*.tar.gz go-ipfs*.tar.gz; do
+    find /root /home/* -maxdepth 2 -name "$pattern" -exec rm -f {} \; 2>/dev/null || true
+done
+for dir_pattern in kubo go-ipfs; do
+    find /root /home/* -maxdepth 2 -name "$dir_pattern" -type d -exec rm -rf {} \; 2>/dev/null || true
 done
 
 # Remove log files
@@ -172,12 +189,15 @@ for profile_file in /etc/profile /etc/bash.bashrc /etc/environment; do
     fi
 done
 
-# Remove IPFS variables from user profiles
+# Remove IPFS variables from user profiles (specifically IPFS_PATH from install_alternative)
 for home_dir in /home/* /root; do
     for profile_file in "$home_dir/.bashrc" "$home_dir/.profile" "$home_dir/.bash_profile"; do
         if [[ -f "$profile_file" ]]; then
             if grep -q "IPFS\|ipfs" "$profile_file" 2>/dev/null; then
                 info "Cleaning IPFS variables from $profile_file"
+                # Remove the specific IPFS_PATH export that install_alternative adds
+                sed -i '/export IPFS_PATH=\/var\/lib\/ipfs/d' "$profile_file" 2>/dev/null || true
+                # Remove any other IPFS-related lines
                 sed -i '/IPFS/d; /ipfs/d' "$profile_file" 2>/dev/null || true
             fi
         fi
@@ -262,12 +282,14 @@ if [[ -n "$FOUND_FILES" ]]; then
 fi
 
 info "IPFS Kubo relay node comprehensive removal complete."
+info "Successfully reverted all changes made by r1fs_setup_alternative.sh"
 info "The following components have been removed:"
 info "  ✓ IPFS systemd service and all configurations"
 info "  ✓ All IPFS repository and data directories"
 info "  ✓ IPFS system user and group (including home directory)"
-info "  ✓ All IPFS binaries and symbolic links"
-info "  ✓ Downloaded installation files and caches"
+info "  ✓ All IPFS binaries and symbolic links (/usr/bin/ipfs -> /usr/local/bin/ipfs)"
+info "  ✓ Downloaded installation files and extraction directories"
+info "  ✓ IPFS_PATH environment variables from root profile"
 info "  ✓ Log files and systemd journal entries"
 info "  ✓ Cron jobs and scheduled tasks"
 info "  ✓ Environment variables and profile modifications"
