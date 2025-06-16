@@ -10,6 +10,7 @@
 # It outputs color-coded results for easy reading. Use --json for machine-readable output.
 #
 # Usage: r1fs_check.sh [--json]
+VER="0.1.0"
 
 set -e
 
@@ -18,6 +19,41 @@ RED="\033[0;31m"    # Red for errors/no
 GREEN="\033[0;32m"  # Green for OK/yes
 YELLOW="\033[0;33m" # Yellow for warnings
 NC="\033[0m"       # No color
+
+log_with_color() {
+    local text="$1"
+    local color="$2"
+    local color_code=""
+
+    case $color in
+        red)
+            color_code="0;31" # Red
+            ;;
+        green)
+            color_code="0;32" # Green
+            ;;
+        blue)
+            color_code="0;36" # Blue
+            ;;
+        yellow)
+            color_code="0;33" # Yellow
+            ;;
+        light)
+            color_code="1;37" # Light (White)
+            ;;
+        gray)
+            color_code="2;37" # Gray (White)
+            ;;
+        *)
+            color_code="0" # Default color
+            ;;
+    esac
+
+    echo -e "\e[${color_code}m${text}\e[0m"
+}
+
+
+log_with_color "Starting IPFS Check script (version $VER)..." "green"
 
 JSON_OUTPUT=false
 if [[ "$1" == "--json" ]]; then

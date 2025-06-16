@@ -1,4 +1,5 @@
 #!/bin/bash
+VER="0.1.0"
 
 log_with_color() {
     local text="$1"
@@ -36,6 +37,8 @@ log_with_color() {
 set -e
 
 KUBO_VERSION="v0.35.0"
+
+log_with_color "Starting IPFS Relay Node setup script (version $VER)..." "green"
 
 ARCH="$(uname -m)"
 if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then

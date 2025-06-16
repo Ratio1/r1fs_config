@@ -1,4 +1,5 @@
 #!/bin/bash
+VER="0.1.0"
 
 log_with_color() {
     local text="$1"
@@ -31,6 +32,8 @@ log_with_color() {
 
     echo -e "\e[${color_code}m${text}\e[0m"
 }
+
+log_with_color "Starting IPFS Relay Remove script (version $VER)..." "green"
 
 log_with_color "Starting IPFS removal process..." "blue"
 

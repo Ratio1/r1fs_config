@@ -14,6 +14,7 @@
 # - Enabling of circuit relay v2 service in IPFS config.
 # - Idempotent systemd service setup for running the IPFS daemon on startup.
 # - Logging messages with consistent format for clarity.
+VER="0.1.0"
 
 set -e
 
@@ -28,6 +29,8 @@ warn() {
 error() {
     echo -e "\033[1;31m[ERROR] $1\033[0m" >&2
 }
+
+info "Starting IPFS Relay Install Alternative script (version $VER)..."
 
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
