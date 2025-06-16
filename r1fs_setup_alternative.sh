@@ -172,7 +172,13 @@ if [[ -n "$SWARM_KEY_FILE" ]]; then
     if [[ "$SWARM_KEY_FILE" == *"base64"* ]] || [[ "$SWARM_KEY_FILE" == *"_base64.txt" ]]; then
         info "Decoding base64 swarm key file: $SWARM_KEY_FILE"
         # Get absolute path to ensure file can be found
-        SWARM_KEY_ABS_PATH="$(realpath "$SWARM_KEY_FILE")"
+        if [[ "$SWARM_KEY_FILE" = /* ]]; then
+            # Already absolute path
+            SWARM_KEY_ABS_PATH="$SWARM_KEY_FILE"
+        else
+            # Convert relative to absolute path
+            SWARM_KEY_ABS_PATH="$(pwd)/$SWARM_KEY_FILE"
+        fi
         if [[ ! -f "$SWARM_KEY_ABS_PATH" ]]; then
             error "Base64 swarm key file not found: $SWARM_KEY_ABS_PATH"
             exit 1
