@@ -142,6 +142,12 @@ else
     # Cleanup temp files
     rm -rf "$TMP_DIR"
     trap - EXIT
+    
+    # Ensure IPFS is accessible in PATH by creating symlink if needed
+    if [[ ! -L "/usr/bin/ipfs" && -f "/usr/local/bin/ipfs" ]]; then
+        info "Creating symlink to make ipfs command available in PATH..."
+        ln -sf /usr/local/bin/ipfs /usr/bin/ipfs
+    fi
 fi
 
 # Ensure ipfs user and group exist
@@ -241,6 +247,18 @@ systemctl restart ipfs
 sleep 3
 if systemctl is-active --quiet ipfs; then
     info "IPFS Kubo relay node setup complete. Service 'ipfs' is active and running (version: $(ipfs --version))."
+    
+    # Display bootstrap information for other relay nodes
+    info "Generating bootstrap information for other relay nodes..."
+    PEER_ID=$(sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs id -f='<id>'")
+    MY_IP=$(hostname -I | awk '{print $1}')
+    MY_BOOTSTRAP="/ip4/$MY_IP/tcp/4001/p2p/$PEER_ID"
+    
+    info "Node Peer ID: $PEER_ID"
+    info "Node IP: $MY_IP"
+    echo -e "\033[1;36m[INFO] Bootstrap address: $MY_BOOTSTRAP\033[0m"
+    echo -e "\033[1;36m[INFO] Please run the following command on the other relay servers:\033[0m"
+    echo -e "\033[1;32mipfs bootstrap add $MY_BOOTSTRAP\033[0m"
 else
     error "IPFS service failed to start. Please check 'journalctl -u ipfs' for details."
 fi
