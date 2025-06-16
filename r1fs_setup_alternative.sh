@@ -32,6 +32,9 @@ error() {
 
 info "Starting IPFS Relay Install Alternative script (version $VER)..."
 
+# Capture original working directory before any sudo re-execution
+ORIGINAL_DIR="$(pwd)"
+
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root. Re-running with sudo..."
@@ -49,10 +52,10 @@ done
 
 # If no -k provided, check common locations for a swarm.key or base64 encoded file
 if [[ -z "$SWARM_KEY_FILE" ]]; then
-    if [[ -f "./swarm.key" ]]; then
-        SWARM_KEY_FILE="./swarm.key"
-    elif [[ -f "./swarm_key_base64.txt" ]]; then
-        SWARM_KEY_FILE="./swarm_key_base64.txt"
+    if [[ -f "$ORIGINAL_DIR/swarm.key" ]]; then
+        SWARM_KEY_FILE="$ORIGINAL_DIR/swarm.key"
+    elif [[ -f "$ORIGINAL_DIR/swarm_key_base64.txt" ]]; then
+        SWARM_KEY_FILE="$ORIGINAL_DIR/swarm_key_base64.txt"
     elif [[ -f "/etc/ipfs/swarm.key" ]]; then
         SWARM_KEY_FILE="/etc/ipfs/swarm.key"
     fi
@@ -171,21 +174,12 @@ if [[ -n "$SWARM_KEY_FILE" ]]; then
     # Check if it's a base64 encoded file
     if [[ "$SWARM_KEY_FILE" == *"base64"* ]] || [[ "$SWARM_KEY_FILE" == *"_base64.txt" ]]; then
         info "Decoding base64 swarm key file: $SWARM_KEY_FILE"
-        # Get absolute path to ensure file can be found
-        if [[ "$SWARM_KEY_FILE" = /* ]]; then
-            # Already absolute path
-            SWARM_KEY_ABS_PATH="$SWARM_KEY_FILE"
-        else
-            # Convert relative to absolute path, removing ./ prefix if present
-            CLEAN_PATH="${SWARM_KEY_FILE#./}"
-            SWARM_KEY_ABS_PATH="$(pwd)/$CLEAN_PATH"
-        fi
-        if [[ ! -f "$SWARM_KEY_ABS_PATH" ]]; then
-            error "Base64 swarm key file not found: $SWARM_KEY_ABS_PATH"
+        if [[ ! -f "$SWARM_KEY_FILE" ]]; then
+            error "Base64 swarm key file not found: $SWARM_KEY_FILE"
             exit 1
         fi
         # Decode base64 file and write to swarm.key
-        base64 -d "$SWARM_KEY_ABS_PATH" > "/var/lib/ipfs/swarm.key"
+        base64 -d "$SWARM_KEY_FILE" > "/var/lib/ipfs/swarm.key"
         chown ipfs:ipfs "/var/lib/ipfs/swarm.key"
         chmod 600 "/var/lib/ipfs/swarm.key"
     else
