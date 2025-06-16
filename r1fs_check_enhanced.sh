@@ -287,16 +287,16 @@ if command -v journalctl &> /dev/null; then
     journalctl -u ipfs -n 50 --no-pager | sed 's/^/  /'
     
     log_with_color "Relay-specific log entries:" "blue"
-    journalctl -u ipfs -b --no-pager | grep -i "relay" | tail -20 | sed 's/^/  /' || log_with_color "  No relay-specific log entries found" "gray"
+    timeout 30 journalctl -u ipfs --since "24 hours ago" --no-pager | grep -i "relay" | tail -20 | sed 's/^/  /' || log_with_color "  No relay-specific log entries found" "gray"
     
     log_with_color "Connection-related log entries:" "blue"
-    journalctl -u ipfs -b --no-pager | grep -i -E "(connect|disconnect|peer|swarm)" | tail -20 | sed 's/^/  /' || log_with_color "  No connection-related log entries found" "gray"
+    timeout 30 journalctl -u ipfs --since "24 hours ago" --no-pager | grep -i -E "(connect|disconnect|peer|swarm)" | tail -20 | sed 's/^/  /' || log_with_color "  No connection-related log entries found" "gray"
     
     log_with_color "Error log entries:" "blue"
-    journalctl -u ipfs -b --no-pager | grep -i -E "(error|fail|warn)" | tail -20 | sed 's/^/  /' || log_with_color "  No error log entries found" "green"
+    timeout 30 journalctl -u ipfs --since "24 hours ago" --no-pager | grep -i -E "(error|fail|warn)" | tail -20 | sed 's/^/  /' || log_with_color "  No error log entries found" "green"
     
     log_with_color "Circuit relay log entries:" "blue"
-    journalctl -u ipfs -b --no-pager | grep -i "circuit" | tail -20 | sed 's/^/  /' || log_with_color "  No circuit relay log entries found" "gray"
+    timeout 30 journalctl -u ipfs --since "24 hours ago" --no-pager | grep -i "circuit" | tail -20 | sed 's/^/  /' || log_with_color "  No circuit relay log entries found" "gray"
 else
     log_with_color "journalctl not available for log analysis" "yellow"
 fi
