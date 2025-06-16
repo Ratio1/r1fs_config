@@ -342,4 +342,56 @@ log_with_color "  - Added to bootstrap peers: ipfs bootstrap add /ip4/163.172.14
 log_with_color "  - Accessible via network (ping and port 4001)" "yellow"
 log_with_color "  - Using the same swarm key (for private networks)" "yellow"
 
+log_with_color "=== SPECIFIC RELAY ERROR DEBUGGING ===" "blue"
+# Specific debugging for the relay error from the terminal output
+relay_error_ip="163.172.143.5"
+log_with_color "Debugging relay error for IP: $relay_error_ip" "blue"
+
+# Check if this IP is in bootstrap peers
+if $daemon_running && command -v ipfs &> /dev/null; then
+    log_with_color "Checking if $relay_error_ip is in bootstrap peers:" "blue"
+    if sudo -u ipfs -H sh -c 'IPFS_PATH=/var/lib/ipfs ipfs bootstrap list' 2>/dev/null | grep -q "$relay_error_ip"; then
+        log_with_color "  $relay_error_ip found in bootstrap peers" "green"
+        # Show the exact bootstrap entry
+        bootstrap_entry=$(sudo -u ipfs -H sh -c 'IPFS_PATH=/var/lib/ipfs ipfs bootstrap list' 2>/dev/null | grep "$relay_error_ip")
+        log_with_color "  Bootstrap entry: $bootstrap_entry" "cyan"
+    else
+        log_with_color "  $relay_error_ip NOT found in bootstrap peers" "red"
+        log_with_color "  This is likely the cause of the error!" "red"
+    fi
+    
+    # Try to detect the expected peer ID for this relay
+    log_with_color "Checking current peer connections for $relay_error_ip:" "blue"
+    if sudo -u ipfs -H sh -c 'IPFS_PATH=/var/lib/ipfs ipfs swarm peers' 2>/dev/null | grep -q "$relay_error_ip"; then
+        relay_peer_conn=$(sudo -u ipfs -H sh -c 'IPFS_PATH=/var/lib/ipfs ipfs swarm peers' 2>/dev/null | grep "$relay_error_ip")
+        log_with_color "  Current connection to $relay_error_ip: $relay_peer_conn" "green"
+    else
+        log_with_color "  No current connection to $relay_error_ip" "yellow"
+    fi
+    
+    # Check recent attempts to connect to this relay
+    log_with_color "Recent connection attempts to $relay_error_ip:" "blue"
+    recent_attempts=$(journalctl -u ipfs --no-pager --since "1 hour ago" | grep "$relay_error_ip" | tail -5 || echo "No recent attempts found")
+    if [[ "$recent_attempts" != "No recent attempts found" ]]; then
+        echo "$recent_attempts" | sed 's/^/  /'
+    else
+        log_with_color "  No recent connection attempts found" "gray"
+    fi
+fi
+
+log_with_color "=== CLIENT-SIDE DEBUGGING COMMANDS ===" "yellow"
+log_with_color "To fix the relay error on the CLIENT side, try these commands:" "yellow"
+log_with_color "1. Check if relay is configured as bootstrap peer:" "cyan"
+log_with_color "   ipfs bootstrap list | grep $relay_error_ip" "gray"
+log_with_color "2. Add relay to bootstrap (replace PEER_ID with actual peer ID):" "cyan"
+log_with_color "   ipfs bootstrap add /ip4/$relay_error_ip/tcp/4001/p2p/PEER_ID" "gray"
+log_with_color "3. Try manual connection to relay:" "cyan"
+log_with_color "   ipfs swarm connect /ip4/$relay_error_ip/tcp/4001/p2p/PEER_ID" "gray"
+log_with_color "4. Check if client can reach relay:" "cyan"
+log_with_color "   ping $relay_error_ip" "gray"
+log_with_color "   telnet $relay_error_ip 4001" "gray"
+log_with_color "5. Restart IPFS daemon after adding bootstrap:" "cyan"
+log_with_color "   systemctl restart ipfs" "gray"
+
 log_with_color "Enhanced IPFS diagnostic check complete!" "green"
+log_with_color "If issues persist, check both client and relay node configurations" "yellow"
