@@ -176,8 +176,9 @@ if [[ -n "$SWARM_KEY_FILE" ]]; then
             # Already absolute path
             SWARM_KEY_ABS_PATH="$SWARM_KEY_FILE"
         else
-            # Convert relative to absolute path
-            SWARM_KEY_ABS_PATH="$(pwd)/$SWARM_KEY_FILE"
+            # Convert relative to absolute path, removing ./ prefix if present
+            CLEAN_PATH="${SWARM_KEY_FILE#./}"
+            SWARM_KEY_ABS_PATH="$(pwd)/$CLEAN_PATH"
         fi
         if [[ ! -f "$SWARM_KEY_ABS_PATH" ]]; then
             error "Base64 swarm key file not found: $SWARM_KEY_ABS_PATH"
