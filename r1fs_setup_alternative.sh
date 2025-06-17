@@ -14,6 +14,7 @@
 # - Enabling of circuit relay v2 service in IPFS config.
 # - Idempotent systemd service setup for running the IPFS daemon on startup.
 # - Logging messages with consistent format for clarity.
+VER="0.1.0"
 
 set -e
 
@@ -29,10 +30,15 @@ error() {
     echo -e "\033[1;31m[ERROR] $1\033[0m" >&2
 }
 
+info "Starting IPFS Relay Install Alternative script (version $VER)..."
+
+# Capture original working directory before any sudo re-execution
+ORIGINAL_DIR="$(pwd)"
+
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root. Re-running with sudo..."
-    exec sudo bash "$0" "$@"
+    exec sudo bash -c "cd '$(pwd)' && bash '$0' $*"
 fi
 
 # Parse options
@@ -44,10 +50,12 @@ while getopts "k:" opt; do
     esac
 done
 
-# If no -k provided, check common locations for a swarm.key
+# If no -k provided, check common locations for a swarm.key or base64 encoded file
 if [[ -z "$SWARM_KEY_FILE" ]]; then
-    if [[ -f "./swarm.key" ]]; then
-        SWARM_KEY_FILE="./swarm.key"
+    if [[ -f "$ORIGINAL_DIR/swarm.key" ]]; then
+        SWARM_KEY_FILE="$ORIGINAL_DIR/swarm.key"
+    elif [[ -f "$ORIGINAL_DIR/swarm_key_base64.txt" ]]; then
+        SWARM_KEY_FILE="$ORIGINAL_DIR/swarm_key_base64.txt"
     elif [[ -f "/etc/ipfs/swarm.key" ]]; then
         SWARM_KEY_FILE="/etc/ipfs/swarm.key"
     fi
@@ -111,11 +119,11 @@ else
     else
         error "Neither curl nor wget is available to download Kubo."
         exit 1
-    end
+    fi
     if [[ ! -f kubo.tar.gz ]]; then
         error "Failed to download Kubo archive from $DOWNLOAD_URL"
         exit 1
-    end
+    fi
     info "Download complete. Verifying checksum..."
     if command -v sha512sum &> /dev/null; then
         EXPECTED_HASH="$(curl -fsSL ${DOWNLOAD_URL}.sha512 | awk '{print $1}')"
@@ -123,8 +131,8 @@ else
         if [[ -n "$EXPECTED_HASH" && "$DOWNLOADED_HASH" != "$EXPECTED_HASH" ]]; then
             error "Checksum verification failed! The downloaded archive may be corrupted."
             exit 1
-        end
-    end
+        fi
+    fi
     info "Extracting Kubo archive..."
     tar -xzf kubo.tar.gz
     cd kubo
@@ -134,6 +142,32 @@ else
     # Cleanup temp files
     rm -rf "$TMP_DIR"
     trap - EXIT
+    
+    # Ensure IPFS is accessible in PATH by creating symlink if needed
+    if [[ ! -L "/usr/bin/ipfs" && -f "/usr/local/bin/ipfs" ]]; then
+        info "Creating symlink to make ipfs command available in PATH..."
+        ln -sf /usr/local/bin/ipfs /usr/bin/ipfs
+    fi
+    
+    # Set IPFS_PATH for root user to use the shared repository
+    info "Configuring IPFS_PATH environment variable for root user..."
+    if ! grep -q "export IPFS_PATH=/var/lib/ipfs" /root/.bashrc 2>/dev/null; then
+        echo "export IPFS_PATH=/var/lib/ipfs" >> /root/.bashrc
+    fi
+    if ! grep -q "export IPFS_PATH=/var/lib/ipfs" /root/.profile 2>/dev/null; then
+        echo "export IPFS_PATH=/var/lib/ipfs" >> /root/.profile
+    fi
+    
+    # Reload shell configuration for immediate availability
+    info "Reloading shell configuration..."
+    if [[ -f /root/.bashrc ]]; then
+        source /root/.bashrc 2>/dev/null || true
+    fi
+    if [[ -f /root/.profile ]]; then
+        source /root/.profile 2>/dev/null || true
+    fi
+    # Also export for current session
+    export IPFS_PATH=/var/lib/ipfs
 fi
 
 # Ensure ipfs user and group exist
@@ -155,17 +189,33 @@ chmod 750 /var/lib/ipfs
 export IPFS_PATH=/var/lib/ipfs
 if [[ ! -f "/var/lib/ipfs/config" ]]; then
     info "Initializing IPFS repository (profile: server, empty repo)..."
-    sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs init -e --profile server"
+    # --profile server will add connection filters.
+    sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs init"
 fi
 
 # If a swarm key is provided, copy it into place
 if [[ -n "$SWARM_KEY_FILE" ]]; then
     info "Integrating swarm key for private network..."
-    # Only copy if not already in place or differs
-    if [[ ! -f "/var/lib/ipfs/swarm.key" || $(diff -q "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key") ]]; then
-        cp -f "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key"
+    
+    # Check if it's a base64 encoded file
+    if [[ "$SWARM_KEY_FILE" == *"base64"* ]] || [[ "$SWARM_KEY_FILE" == *"_base64.txt" ]]; then
+        info "Decoding base64 swarm key file: $SWARM_KEY_FILE"
+        if [[ ! -f "$SWARM_KEY_FILE" ]]; then
+            error "Base64 swarm key file not found: $SWARM_KEY_FILE"
+            exit 1
+        fi
+        # Decode base64 file and write to swarm.key
+        base64 -d "$SWARM_KEY_FILE" > "/var/lib/ipfs/swarm.key"
         chown ipfs:ipfs "/var/lib/ipfs/swarm.key"
         chmod 600 "/var/lib/ipfs/swarm.key"
+    else
+        # Handle regular swarm key file
+        # Only copy if not already in place or differs
+        if [[ ! -f "/var/lib/ipfs/swarm.key" || $(diff -q "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key") ]]; then
+            cp -f "$SWARM_KEY_FILE" "/var/lib/ipfs/swarm.key"
+            chown ipfs:ipfs "/var/lib/ipfs/swarm.key"
+            chmod 600 "/var/lib/ipfs/swarm.key"
+        fi
     fi
 fi
 
@@ -217,6 +267,20 @@ systemctl restart ipfs
 sleep 3
 if systemctl is-active --quiet ipfs; then
     info "IPFS Kubo relay node setup complete. Service 'ipfs' is active and running (version: $(ipfs --version))."
+    
+    # Display bootstrap information for other relay nodes
+    info "Generating bootstrap information for other relay nodes..."
+    # Set IPFS_PATH temporarily for this session if not already set
+    export IPFS_PATH=/var/lib/ipfs
+    PEER_ID=$(sudo -u ipfs -H sh -c "IPFS_PATH=/var/lib/ipfs ipfs id -f='<id>'")
+    MY_IP=$(hostname -I | awk '{print $1}')
+    MY_BOOTSTRAP="/ip4/$MY_IP/tcp/4001/p2p/$PEER_ID"
+    
+    info "Node Peer ID: $PEER_ID"
+    info "Node IP: $MY_IP"
+    echo -e "\033[1;36m[INFO] Bootstrap address: $MY_BOOTSTRAP\033[0m"
+    echo -e "\033[1;36m[INFO] Please run the following command on the other relay servers:\033[0m"
+    echo -e "\033[1;32mipfs bootstrap add $MY_BOOTSTRAP\033[0m"
 else
     error "IPFS service failed to start. Please check 'journalctl -u ipfs' for details."
 fi

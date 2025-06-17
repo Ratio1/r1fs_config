@@ -12,6 +12,7 @@
 # - Existing config and data under IPFS_PATH (e.g., /var/lib/ipfs) remain intact.
 # - The IPFS systemd service is restarted, and the new version is confirmed.
 # - Temporary files are cleaned up and the script can be re-run safely.
+VER="0.1.0"
 
 set -e
 
@@ -27,6 +28,8 @@ warn() {
 error() {
     echo -e "\033[1;31m[ERROR] $1\033[0m" >&2
 }
+
+info "Starting IPFS Relay Update script (version $VER)..."
 
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
@@ -112,7 +115,7 @@ if [[ ! -f kubo.tar.gz ]]; then
     exit 1
 fi
 
-info "Download complete. Verifying archive..." 
+info "Download complete. Verifying archive..."
 if command -v sha512sum &> /dev/null; then
     EXPECTED_HASH="$(curl -fsSL ${DOWNLOAD_URL}.sha512 | awk '{print $1}')"
     DOWNLOADED_HASH="$(sha512sum kubo.tar.gz | awk '{print $1}')"
@@ -122,7 +125,7 @@ if command -v sha512sum &> /dev/null; then
     fi
 fi
 
-info "Installing Kubo $TARGET_VER..." 
+info "Installing Kubo $TARGET_VER..."
 tar -xzf kubo.tar.gz
 cd kubo
 bash install.sh
