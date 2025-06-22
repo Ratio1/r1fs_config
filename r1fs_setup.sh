@@ -86,10 +86,15 @@ log_with_color "Initializing IPFS with server profile..." "blue"
 ipfs init
 
 # Step 3: Configure Circuit Relay v2 Service
+ipfs config Routing.Type dhtserver
 ipfs config --json Swarm.RelayService.Enabled true
 ipfs config --json Swarm.RelayService.MaxReservations 512
 ipfs config --json Swarm.RelayService.MaxCircuits 64
 ipfs config --json Swarm.RelayClient.Enabled false
+ipfs config --json Swarm.Transports.Network.TCP true
+ipfs config --json Swarm.Transports.Network.QUIC false
+ipfs config --json Swarm.Transports.Network.Websocket false
+
 
 # Step 4: Set up swarm key for private network
 log_with_color "Setting up swarm key for private network..." "blue"
@@ -99,9 +104,13 @@ if [ -f "swarm_key_base64.txt" ]; then
     log_with_color "Found swarm_key_base64.txt, installing..." "green"
     cat swarm_key_base64.txt | base64 -d > ~/.ipfs/swarm.key
     log_with_color "Swarm key installed from base64 file" "green"
+elif [ -f "swarm.key" ]; then
+    log_with_color "Found swarm.key, installing..." "green"
+    cp swarm.key ~/.ipfs/
+    log_with_color "Swarm key installed from base64 file" "green"
 else
-    log_with_color "swarm_key_base64.txt not found in current directory: $(pwd)" "red"
-    log_with_color "Please ensure the swarm key file is in the same directory as this script." "yellow"
+    log_with_color "swarm_key_base64.txt or swarm.key not found in current directory: $(pwd)" "red"
+    log_with_color "Please ensure the swarm key files are in the same directory as this script." "yellow"
     log_with_color "Available files in current directory:" "yellow"
     ls -la
     exit 1

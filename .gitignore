@@ -1,4 +1,10 @@
 swarm_key_base64.txt
+swarm.key
+swarm_key.txt
+r1fs_cert.crt
+r1fs_cert.key
+*.tar.gz*
+kubo/
 .idea/
 .vscode/
 .env
