@@ -42,8 +42,8 @@ rm -f /etc/nginx/sites-enabled/default
 if [[ ! -f "$LOCAL_CRT" || ! -f "$LOCAL_KEY" ]]; then                
   echo "==> Generating self-signed TLS certificate in $PWD …"
   openssl req -x509 -nodes -newkey rsa:4096 -days 365 \
-          -subj "/CN=r1fs" \
-          -addext "subjectAltName = DNS:r1fs" \
+          -subj "/CN=${SERVER_IP}" \
+          -addext "subjectAltName = DNS:${SERVER_IP},IP:${SERVER_IP}" \
           -keyout "$LOCAL_KEY" -out "$LOCAL_CRT"
 else
   echo "==> Re-using existing $LOCAL_CRT and $LOCAL_KEY"
