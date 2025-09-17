@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ipfs-nginx-setup.sh â€” secure nginx reverse-proxy for Kubo 0.35 API
+# ipfs-nginx-setup.sh Ã¢â‚¬â€ secure nginx reverse-proxy for Kubo 0.35 API
 # Usage: sudo ./ipfs-nginx-setup.sh [SERVER_IP] [USER] [PASS]
 set -euo pipefail
 
@@ -7,7 +7,7 @@ set -euo pipefail
 SERVER_IP="${1:-$(ip route get 1.1.1.1 | awk '{print $7; exit}')}"  # pick first routed IPv4 :contentReference[oaicite:0]{index=0}
 BASIC_USER="${2:-r1fs}"
 
-# If $3 is absent ¿ generate a random 24-char password (¿108-bit entropy)
+# If $3 is absent Â¿ generate a random 24-char password (Â¿108-bit entropy)
 if [[ $# -lt 3 || -z "$3" ]]; then
   BASIC_PASS="$(openssl rand -base64 18 | tr -d '/+=')"
   GEN_PASS=true
@@ -29,19 +29,19 @@ SITE=/etc/nginx/sites-available/ipfs-api.conf
 
 echo "==> Using public IP  $SERVER_IP"
 echo "==> Creating user    $BASIC_USER"
-$GEN_PASS && echo "   ¿ Generated password for user '${BASIC_USER}':  ${BASIC_PASS}"
+$GEN_PASS && echo "   Â¿ Generated password for user '${BASIC_USER}':  ${BASIC_PASS}"
 
 ### ---- 2. Install packages ----------------------------------------------
 apt-get update -qq
 apt-get install -y nginx openssl apache2-utils  # htpasswd lives here :contentReference[oaicite:1]{index=1}
 
-# ---- Kill the port-80 “default” listener -------------------------------
+# ---- Kill the port-80 â€œdefaultâ€ listener -------------------------------
 rm -f /etc/nginx/sites-enabled/default  
 
 ### ---- 3. Generate self-signed certificate -------------------------------
 if [[ ! -f "$LOCAL_CRT" || ! -f "$LOCAL_KEY" ]]; then                
-  echo "==> Generating self-signed TLS certificate in $PWD …"
-  openssl req -x509 -nodes -newkey rsa:4096 -days 365 \
+  echo "==> Generating self-signed TLS certificate in $PWD â€¦"
+  openssl req -x509 -nodes -newkey rsa:4096 -days 3650 \
           -subj "/CN=${SERVER_IP}" \
           -addext "subjectAltName = DNS:${SERVER_IP},IP:${SERVER_IP}" \
           -keyout "$LOCAL_KEY" -out "$LOCAL_CRT"
